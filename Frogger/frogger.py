@@ -115,13 +115,19 @@ def trainModel(episodes=1000, # How many episodes to run
                     previousActionsArray['rewards'].append(snapshot[2])
                     previousActionsArray['next_states'].append(snapshot[3])
                     previousActionsArray['dones'].append(snapshot[4])
+
+                previousActionsArray['states'] = np.expand_dims(previousActionsArray['states'], axis=-1)
                 
 
                 q_values = model.predict(previousActionsArray['states'])
 
                 model.fit(previousActionsArray['states'], q_values, epochs=1, verbose=0)
+                snapshots = makeSnapshotSystem(snapshots_size)
+            if done:
+               break
+
                 
                 
 
 
-trainModel(snapshots_size=10)
+trainModel()
