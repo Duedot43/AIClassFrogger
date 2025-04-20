@@ -61,7 +61,8 @@ def trainModel(episodes=1000, # How many episodes to run
                maxStep=50000, # Max ammount of steps the frog can take before giving up   
                epsilon=1.0, # Initial epsilon this is used for determining weather to use knowlage or explore
                epsilon_decay=.99,
-               snapshots_size=100000
+               snapshots_size=100000,
+               batch_size=32
                ):
     
     env = gym.make("ALE/Frogger-v5", render_mode='rgb_array')
@@ -98,6 +99,7 @@ def trainModel(episodes=1000, # How many episodes to run
             total_steps += 1
 
             if len(snapshots) >= snapshots_size:
+                print("Running GPU stuff")
                 # Wipe the model clean and start new with previously learned data
                 previousActions = sampleSnapshot(snapshots, snapshots_size)
 
@@ -116,11 +118,20 @@ def trainModel(episodes=1000, # How many episodes to run
                     previousActionsArray['next_states'].append(snapshot[3])
                     previousActionsArray['dones'].append(snapshot[4])
 
+
                 previousActionsArray['states'] = np.expand_dims(previousActionsArray['states'], axis=-1)
+                previousActionsArray['actions'] = np.expand_dims(previousActionsArray['actions'], axis=-1)
+                previousActionsArray['rewards'] = np.expand_dims(previousActionsArray['rewards'], axis=-1)
+                previousActionsArray['next_states'] = np.expand_dims(previousActionsArray['next_states'], axis=-1)
+                previousActionsArray['dones'] = np.expand_dims(previousActionsArray['dones'], axis=-1)
                 
+                print("Running model predict")
+                q_values = model.predict(previousActionsArray['states'], verbose=0)
 
-                q_values = model.predict(previousActionsArray['states'])
+                for i in range(batch_size):
+                    q_values[i, previousActionsArray['actions'][i]] = previousActionsArray['rewards'][i]
 
+                print("Running model fit")
                 model.fit(previousActionsArray['states'], q_values, epochs=1, verbose=0)
                 snapshots = makeSnapshotSystem(snapshots_size)
             if done:
